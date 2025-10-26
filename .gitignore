@@ -21,3 +21,6 @@ app/models/model.pkl
 # streamlit & cache
 .streamlit/
 **/__pycache__/
+
+# docs and images
+!img/
