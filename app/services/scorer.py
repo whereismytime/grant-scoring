@@ -5,7 +5,7 @@ from app.services.ml_model import MLModel
 _ml = MLModel(path="app/models/model.pkl")
 
 def score(a: Applicant, use_ml: bool = True, threshold: float = 0.5) -> ScoreResponse:
-    # 1) ML вероятность заранее, если включён ML
+    # 1) Compute ML probability first, if ML mode is enabled
     prob = None
     if use_ml:
         feats = {
@@ -16,7 +16,7 @@ def score(a: Applicant, use_ml: bool = True, threshold: float = 0.5) -> ScoreRes
         }
         prob = _ml.prob(feats)
 
-    # 2) Жёсткие отказы всегда сильнее, но prob не скрываем
+    # 2) Hard declines always take precedence, but we still show the ML probability
     hd, r = hard_decline(a)
     if hd:
         return ScoreResponse(
@@ -24,7 +24,7 @@ def score(a: Applicant, use_ml: bool = True, threshold: float = 0.5) -> ScoreRes
             prob=prob, reasons=[r, "rule override"]
         )
 
-    # 3) Базовое правило + возможное ML-вeto/approve
+    # 3) Apply rule-based decision + possible ML override
     ok_rule, reason_rule = rule_decision(a)
     ok = ok_rule
     reasons = [reason_rule]
@@ -32,7 +32,7 @@ def score(a: Applicant, use_ml: bool = True, threshold: float = 0.5) -> ScoreRes
     if use_ml:
         ok_ml = (prob is not None) and (prob >= threshold)
         if ok_ml != ok_rule:
-            # Явно фиксируем, кто переиграл
+            # Explicitly record who overrode the decision
             reasons.append("ml ≥ thr" if ok_ml else "ml < thr")
         ok = ok_ml
 

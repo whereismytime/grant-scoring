@@ -7,7 +7,7 @@ OUT = Path("data/processed"); OUT.mkdir(parents=True, exist_ok=True)
 
 df = pd.read_csv(IN)
 
-# Фоллбек: если approved нет, размечаем по правилам
+# Fallback: if `approved` is missing, derive labels from business rules
 if "approved" in df.columns:
     y_true = df["approved"].astype(int).values
 else:
@@ -44,12 +44,12 @@ def sweep_best_threshold(y, p):
 
 def metrics(mask):
     p = proba[mask]; y_hat = (p >= 0.5).astype(int); yt = y_true[mask]
-    best_t, best_acc = sweep_best_threshold(yt, p) if len(np.unique(yt))>1 else (None, None)
+    best_t, best_acc = sweep_best_threshold(yt, p) if len(np.unique(yt)) > 1 else (None, None)
     return {
         "N": int(mask.sum()),
         "approve_rate_ML": float(y_hat.mean()),
         "ACC@0.50": float(accuracy_score(yt, y_hat)),
-        "AUC": float(roc_auc_score(yt, p)) if len(np.unique(yt))>1 else None,
+        "AUC": float(roc_auc_score(yt, p)) if len(np.unique(yt)) > 1 else None,
         "best_thr_ACC": float(best_t) if best_t is not None else None,
         "best_ACC": float(best_acc) if best_acc is not None else None,
         "confusion@0.50": confusion_matrix(yt, y_hat).tolist(),
@@ -62,7 +62,7 @@ for b in df["bucket"].unique():
 df_out = df.copy()
 df_out["p_ml"] = proba
 df_out["y_ml@0.50"] = (proba >= 0.5).astype(int)
-df_out.to_csv(OUT/"preds_from_csv.csv", index=False)
-Path(OUT/"metrics_from_csv.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False))
+df_out.to_csv(OUT / "preds_from_csv.csv", index=False)
+Path(OUT / "metrics_from_csv.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False))
 print(json.dumps(summary, indent=2, ensure_ascii=False))
-print("saved CSV ->", OUT/"preds_from_csv.csv"); print("saved JSON ->", OUT/"metrics_from_csv.json")
+print("saved CSV ->", OUT / "preds_from_csv.csv"); print("saved JSON ->", OUT / "metrics_from_csv.json")

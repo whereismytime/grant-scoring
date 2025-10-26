@@ -25,7 +25,7 @@ if submitted:
         use_ml=bool(st.session_state.use_ml),
         thr=float(st.session_state.thr),
     )
-    with st.spinner("Scoring..."):
+    with st.spinner("Evaluating..."):
         try:
             a = Applicant(
                 distance_km=params["distance"],
@@ -39,7 +39,7 @@ if submitted:
             st.code({"params": params})
             st.stop()
 
-    st.caption(f"Mode: **{'ML' if params['use_ml'] else 'Rules'}** | thr={params['thr']:.2f}")
+    st.caption(f"Mode: **{'ML' if params['use_ml'] else 'Rules'}** | Threshold = {params['thr']:.2f}")
     c1, c2, c3 = st.columns(3)
     c1.metric("Decision", res.decision.upper())
     c2.metric("Approved", "Yes" if res.approved else "No")
@@ -48,8 +48,8 @@ if submitted:
     if res.prob is not None:
         st.progress(min(max(res.prob, 0.0), 1.0))
         if "rule override" in res.reasons:
-            st.caption("ML prob показан, но решение отклонено правилами.")
+            st.caption("ML probability is shown, but the decision was overridden by rules.")
 
     st.caption("Reasons: " + ", ".join(res.reasons))
-    with st.expander("Debug"):
+    with st.expander("Debug info"):
         st.code({"params": params, "result": res.model_dump()})

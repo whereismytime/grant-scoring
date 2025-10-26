@@ -149,7 +149,6 @@ Place images under `docs/img/` and reference in README:
 ```markdown
 ![Approve](docs/img/ui_approve.png)
 ![Decline override](docs/img/ui_decline_override.png)
-![Borderline](docs/img/ui_borderline.png)
 ```
 
 ## License

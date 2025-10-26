@@ -1,4 +1,3 @@
-# app/ml/generate_scenarios.py
 import numpy as np, pandas as pd
 from pathlib import Path
 rng = np.random.default_rng(42)
