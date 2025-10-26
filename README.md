@@ -71,8 +71,8 @@ streamlit run app/ui/dashboard.py
 ```
 Shows mode (Rules/ML, threshold), decision, probability bar, amount, and reasons. Add screenshots to `docs/img/` and reference:
 ```markdown
-![Approve](docs/img/ui_approve.png)
-![Decline override](docs/img/ui_decline_override.png)
+![Approve](img/ui_approve.png)
+![Decline override](img/ui_decline_override.png)
 ```
 
 ## Tests
