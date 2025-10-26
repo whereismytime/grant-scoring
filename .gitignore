@@ -1,0 +1,23 @@
+# venv / IDE
+.venv/
+venv/
+*.pyc
+__pycache__/
+.ipynb_checkpoints/
+.vscode/
+.idea/
+
+# data and artifacts
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+app/models/model.pkl
+
+# local env
+.env
+.DS_Store
+
+# streamlit & cache
+.streamlit/
+**/__pycache__/
