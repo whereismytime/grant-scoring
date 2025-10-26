@@ -1,4 +1,4 @@
-# venv / IDE
+# --- venv / IDE ---
 .venv/
 venv/
 *.pyc
@@ -7,20 +7,26 @@ __pycache__/
 .vscode/
 .idea/
 
-# data and artifacts
-data/raw/*
+# --- data and artifacts ---
+data/raw/**
 !data/raw/.gitkeep
-data/processed/*
+!data/raw/docs/
+!data/raw/docs/img/
+!data/raw/docs/img/*.png
+data/processed/**
 !data/processed/.gitkeep
 app/models/model.pkl
 
-# local env
+# --- local env ---
 .env
 .DS_Store
 
-# streamlit & cache
+# --- streamlit & cache ---
 .streamlit/
 **/__pycache__/
 
-# docs and images
-!img/
+# --- docs and images ---
+docs/**
+!docs/img/
+!docs/img/*.png
+!docs/img/.gitkeep
