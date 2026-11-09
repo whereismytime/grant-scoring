@@ -10,9 +10,6 @@ __pycache__/
 # --- data and artifacts ---
 data/raw/**
 !data/raw/.gitkeep
-!data/raw/docs/
-!data/raw/docs/img/
-!data/raw/docs/img/*.png
 data/processed/**
 !data/processed/.gitkeep
 app/models/model.pkl

@@ -1,79 +1,55 @@
-import numpy as np, pandas as pd, joblib
-from sklearn.metrics import roc_auc_score, accuracy_score, confusion_matrix
-from app.domain.schemas import Applicant
-from app.domain.rules import hard_decline, rule_decision
-from app.services.ml_model import MLModel
+"""Compare the ML model with the business rules on a fresh random population.
 
-np.random.seed(42)
+The reference here is the rules themselves, so the numbers show how closely
+the model reproduces them (agreement), not real-world accuracy.
+"""
 
-def gen_dataset(n=10000):
-    distance_km = np.random.randint(0, 81, n)
-    residency_years_ie = np.round(np.random.uniform(0, 6, n), 1)
-    is_immigrant = (np.random.rand(n) < 0.35)
-    parents_status = np.random.choice(["low", "middle", "high"], size=n, p=[0.5, 0.35, 0.15])
-    df = pd.DataFrame({
-        "distance_km": distance_km,
-        "residency_years_ie": residency_years_ie,
-        "is_immigrant": is_immigrant,
-        "parents_status": parents_status
+import argparse
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from sklearn.metrics import accuracy_score, confusion_matrix, roc_auc_score
+
+from app.ml.features import rule_labels
+from app.services.ml_model import MLModel, model_path
+
+
+def gen_dataset(n=10000, seed=42) -> pd.DataFrame:
+    rng = np.random.default_rng(seed)
+    return pd.DataFrame({
+        "distance_km": rng.integers(0, 81, n).astype(float),
+        "residency_years_ie": np.round(rng.uniform(0, 6, n), 1),
+        "is_immigrant": rng.random(n) < 0.35,
+        "parents_status": rng.choice(["low", "middle", "high"], size=n, p=[0.5, 0.35, 0.15]),
     })
-    return df
 
-def rule_approve(a: Applicant) -> int:
-    hd, _ = hard_decline(a)
-    if hd:
-        return 0
-    ok, _ = rule_decision(a)
-    return int(ok)
 
-def main():
-    df = gen_dataset(20000)
-    ml = MLModel("app/models/model.pkl")
-    # The “true” label is based on what train.py generates (rules).
-    # If you have a real dataset, replace this with the actual approved column.
-    y_true = []
-    y_rule = []
-    y_ml = []
-    p_ml = []
-    for r in df.itertuples(index=False):
-        a = Applicant(
-            distance_km=float(r.distance_km),
-            residency_years_ie=float(r.residency_years_ie),
-            is_immigrant=bool(r.is_immigrant),
-            parents_status=r.parents_status
-        )
-        y_r = rule_approve(a)
-        y_rule.append(y_r)
-        x = {
-            "distance_km": a.distance_km,
-            "residency_years_ie": a.residency_years_ie,
-            "is_immigrant": int(a.is_immigrant),
-            "parents_status": a.parents_status
-        }
-        p = ml.prob(x)
-        p_ml.append(p)
-        y_ml.append(int(p >= 0.5))
-        y_true.append(y_r)  # replace with real labels if available
+def main(argv=None):
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("-n", type=int, default=20000)
+    p.add_argument("--model", type=Path, default=model_path())
+    p.add_argument("--threshold", type=float, default=0.5)
+    args = p.parse_args(argv)
 
-    y_true = np.array(y_true)
-    y_rule = np.array(y_rule)
-    y_ml = np.array(y_ml)
-    p_ml = np.array(p_ml)
+    df = gen_dataset(args.n)
+    y_rule = rule_labels(df)
+    p_ml = MLModel.load(args.model).prob_batch(df)
+    y_ml = (p_ml >= args.threshold).astype(int)
 
-    print("AUC (ML vs y_true):", round(roc_auc_score(y_true, p_ml), 3))
-    print("Accuracy (Rules):", round(accuracy_score(y_true, y_rule), 3),
-          "Accuracy (ML):", round(accuracy_score(y_true, y_ml), 3))
-    diff = (y_rule != y_ml)
-    print("Share of disagreements (ML vs Rules):", round(diff.mean(), 3))
-    print("Confusion Matrix (ML vs Rules):\n", confusion_matrix(y_rule, y_ml))
+    print("AUC (ML probability vs rule decisions):", round(roc_auc_score(y_rule, p_ml), 3))
+    print("Agreement ML vs rules:", round(accuracy_score(y_rule, y_ml), 3))
+    diff = y_rule != y_ml
+    print("Share of disagreements (ML vs rules):", round(diff.mean(), 3))
+    print("Confusion matrix (rows = rules, cols = ML):\n", confusion_matrix(y_rule, y_ml, labels=[0, 1]))
 
-    # Display 5 examples where ML ≠ rule
     show = df.loc[diff].copy()
     show["rule"] = y_rule[diff]
     show["ml"] = y_ml[diff]
     show["p_ml"] = np.round(p_ml[diff], 3)
-    print("\nExamples of discrepancies (first 5):")
-    print(show.head(5).to_string(index=False))
+    print("\nExamples of disagreements (first 5):")
+    print(show.head(5).to_string(index=False) if len(show) else "none")
+
 
 if __name__ == "__main__":
     main()

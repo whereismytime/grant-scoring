@@ -1,20 +1,19 @@
 from app.domain.schemas import Applicant, ScoreResponse
 from app.domain.rules import amount_by_distance, hard_decline, rule_decision
-from app.services.ml_model import MLModel
+from app.services.ml_model import MLModel, get_model
 
-_ml = MLModel(path="app/models/model.pkl")
 
-def score(a: Applicant, use_ml: bool = True, threshold: float = 0.5) -> ScoreResponse:
-    # 1) Compute ML probability first, if ML mode is enabled
+def score(
+    a: Applicant,
+    use_ml: bool = True,
+    threshold: float = 0.5,
+    model: MLModel | None = None,
+) -> ScoreResponse:
+    # 1) Compute ML probability first, if ML mode is enabled.
+    #    The model is loaded lazily, so rules mode works without model.pkl.
     prob = None
     if use_ml:
-        feats = {
-            "distance_km": a.distance_km,
-            "residency_years_ie": a.residency_years_ie,
-            "is_immigrant": int(a.is_immigrant),
-            "parents_status": a.parents_status,
-        }
-        prob = _ml.prob(feats)
+        prob = (model or get_model()).prob(a)
 
     # 2) Hard declines always take precedence, but we still show the ML probability
     hd, r = hard_decline(a)
@@ -30,7 +29,7 @@ def score(a: Applicant, use_ml: bool = True, threshold: float = 0.5) -> ScoreRes
     reasons = [reason_rule]
 
     if use_ml:
-        ok_ml = (prob is not None) and (prob >= threshold)
+        ok_ml = prob >= threshold
         if ok_ml != ok_rule:
             # Explicitly record who overrode the decision
             reasons.append("ml ≥ thr" if ok_ml else "ml < thr")

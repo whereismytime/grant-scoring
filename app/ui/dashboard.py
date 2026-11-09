@@ -1,5 +1,15 @@
+import sys
+from pathlib import Path
+
+# `streamlit run app/ui/dashboard.py` puts only app/ui on sys.path; add the repo root
+# so the `app` package is importable.
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 import streamlit as st
 from app.domain.schemas import Applicant
+from app.services.ml_model import ModelNotAvailableError
 from app.services.scorer import score
 
 st.set_page_config(page_title="Grant Scoring UI", layout="centered")
@@ -34,6 +44,9 @@ if submitted:
                 parents_status=params["parents"],
             )
             res = score(a, use_ml=params["use_ml"], threshold=params["thr"])
+        except ModelNotAvailableError as e:
+            st.warning(f"{e} Or untick “Use ML model” in the sidebar.")
+            st.stop()
         except Exception as e:
             st.error(f"Scoring error: {e}")
             st.code({"params": params})
